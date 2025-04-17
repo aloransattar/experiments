@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Custom Text Wave</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        font-family: "Libre Caslon Text", serif;
+        background: #151515;
+        color: #fefefe;
+        overflow: hidden;
+      }
+
+      #controls {
+        position: fixed;
+        top: 20%;
+        left: 0;
+        width: 260px;
+        height: 55vh;
+        background: rgba(30, 30, 30, 0.9);
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: hidden;
+        z-index: 10;
+        border:none;
+      }
+
+      #controls h2 {
+        font-size: 20px;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+
+      .control-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        font-size: 14px;
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      input[type="text"],
+      input[type="range"] {
+        width: 100%;
+      }
+
+      input[type="text"] {
+        padding: 6px;
+        font-size: 14px;
+        border: none;
+        background: #222;
+        color: #fff;
+        border-radius: 4px;
+      }
+
+      input[type="range"] {
+        appearance: none;
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #f26940;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+      }
+
+      canvas {
+        position: absolute;
+        left: 260px;
+        top: 0;
+        z-index: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      
+      <div class="control-group">
+        <label for="textInput">Custom Text</label>
+        <input id="textInput" type="text" value="This is a wave —" />
+      </div>
+      <div class="control-group">
+        <label>Frequency</label>
+        <input id="frequencySlider" type="range" min="0.1" max="2" step="0.01" value="1" />
+      </div>
+      <div class="control-group">
+        <label>Amplitude</label>
+        <input id="amplitudeSlider" type="range" min="50" max="400" step="1" value="200" />
+      </div>
+      <div class="control-group">
+        <label>Number of Paths</label>
+        <input id="pathSlider" type="range" min="1" max="10" step="1" value="5" />
+      </div>
+      <div class="control-group">
+        <label>Text Spacing</label>
+        <input id="spacingSlider" type="range" min="5" max="50" step="1" value="15" />
+      </div>
+      <div class="control-group">
+        <label>Wave Curvature</label>
+        <input id="curvatureSlider" type="range" min="0.1" max="3.0" step="0.01" value="2.0" />
+      </div>
+    </div>
+
+    <script>
+      let frequency = 1;
+      let amplitude = 200;
+      let numPaths = 5;
+      let textSpacing = 15;
+      let curvature = 0.5;
+      let targetCurvature = 2.0;
+      let isUserControlling = false;
+      let easing = 0.05;
+
+      let baseText = "This is a wave —";
+
+      function setup() {
+        createCanvas(windowWidth - 260, windowHeight);
+        textFont("Libre Caslon Text");
+        textSize(16);
+        frameRate(12);
+        noFill();
+
+        document.getElementById("textInput").addEventListener("input", (e) => {
+          baseText = e.target.value;
+        });
+
+        document.getElementById("curvatureSlider").addEventListener("input", () => {
+          isUserControlling = true;
+        });
+      }
+
+      function draw() {
+        background(21);
+
+        frequency = parseFloat(document.getElementById("frequencySlider").value);
+        amplitude = parseFloat(document.getElementById("amplitudeSlider").value);
+        numPaths = parseInt(document.getElementById("pathSlider").value);
+        textSpacing = parseInt(document.getElementById("spacingSlider").value);
+
+        if (isUserControlling) {
+          curvature = parseFloat(document.getElementById("curvatureSlider").value);
+        } else {
+          curvature += (targetCurvature - curvature) * easing;
+          if (abs(targetCurvature - curvature) < 0.001) {
+            curvature = targetCurvature;
+          }
+        }
+
+        for (let s = 0; s < numPaths; s++) {
+          let waveOffset = (s - numPaths / 2) * 50;
+          drawWave(s, waveOffset);
+          drawTextOnWave(s, waveOffset);
+        }
+      }
+
+      function drawWave(index, yOffset) {
+        noStroke();
+        beginShape();
+        for (let t = 0; t < 1000; t += 5) {
+          let theta = t * 0.01 + (index * TWO_PI) / numPaths;
+          let radius = amplitude * sin(theta * frequency);
+          let x = (width / 2) + t * curvature * cos(theta);
+          let y = height / 2 + radius + yOffset;
+          vertex(x, y);
+        }
+        endShape();
+      }
+
+      function drawTextOnWave(index, yOffset) {
+        let textToShow = (baseText.length > 0 ? baseText : "—").repeat(10);
+        let offset = (frameCount * 1.5 + index * 100) % 1000;
+
+        for (let i = 0; i < textToShow.length; i++) {
+          let t = (offset + i * textSpacing) % 1000;
+
+          let theta = t * 0.01 + (index * TWO_PI) / numPaths;
+          let radius = amplitude * sin(theta * frequency);
+          let x = (width / 2) + t * curvature * cos(theta);
+          let y = height / 2 + radius + yOffset;
+
+          let tAhead = (t + 1) % 1000;
+          let theta2 = tAhead * 0.01 + (index * TWO_PI) / numPaths;
+          let radius2 = amplitude * sin(theta2 * frequency);
+          let x2 = (width / 2) + tAhead * curvature * cos(theta2);
+          let y2 = height / 2 + radius2 + yOffset;
+          let angle = atan2(y2 - y, x2 - x);
+
+          push();
+          translate(x, y);
+          rotate(angle);
+          noStroke();
+          fill(255);
+          text(textToShow.charAt(i), 0, 0);
+          pop();
+        }
+      }
+    </script>
+  </body>
+</html>
